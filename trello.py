@@ -17,9 +17,10 @@ def read():
 
     # Теперь выведем название каждой колонки и всех заданий, которые к ней относятся:
     for column in column_data:
-        print(column['name'])
-        # Получим данные всех задач в колонке и перечислим все названия
         task_data = requests.get(base_url.format('lists') + '/' + column['id'] + '/cards', params=auth_params).json()
+        print("{} ({})".format(column['name'], len(task_data)))
+        # Получим данные всех задач в колонке и перечислим все названия
+
         if not task_data:
             print('\t' + 'Нет задач!')
             continue
@@ -35,7 +36,19 @@ def create(name, column_name):
         if column['name'] == column_name:
             # Создадим задачу с именем _name_ в найденной колонке
             requests.post(base_url.format('cards'), data={'name': name, 'idList': column['id'], **auth_params})
-	    break
+            break
+
+def create_column(column_name):
+
+    response = requests.post(
+        base_url.format('boards') + '/' + board_id + '/lists',
+        data = {
+            'name': column_name,
+            **auth_params
+        }
+    )
+
+    print(response.text)
 
 def move(name, column_name):
     # Получим данные всех колонок на доске
@@ -60,8 +73,10 @@ def move(name, column_name):
             break
 
 if __name__ == "__main__":
-    if len(sys.argv) <= 2:
+    if len(sys.argv) <= 1:
         read()
+    elif sys.argv[1] == 'create_column':
+        create_column(sys.argv[2])
     elif sys.argv[1] == 'create':
         create(sys.argv[2], sys.argv[3])
     elif sys.argv[1] == 'move':
