@@ -54,23 +54,48 @@ def move(name, column_name):
     # Получим данные всех колонок на доске
     column_data = requests.get(base_url.format('boards') + '/' + board_id + '/lists', params=auth_params).json()
     # Среди всех колонок нужно найти задачу по имени и получить её id
-    task_id = None
-    for column in column_data:
-        column_tasks = requests.get(base_url.format('lists') + '/' + column['id'] + '/cards', params=auth_params).json()
-        for task in column_tasks:
-            if task['name'] == name:
-                task_id = task['id']
-                break
-        if task_id:
-            break
+    task_id = find_all_tasks(name)
 
     # Теперь, когда у нас есть id задачи, которую мы хотим переместить
     # Переберём данные обо всех колонках, пока не найдём ту, в которую мы будем перемещать задачу
+
     for column in column_data:
         if column['name'] == column_name:
             # И выполним запрос к API для перемещения задачи в нужную колонку
             requests.put(base_url.format('cards') + '/' + task_id + '/idList', data={'value': column['id'], **auth_params})
             break
+    read()
+
+def find_all_tasks(name):
+    class TaskObj:
+        def __init__(self, id, task_id, task_name, column_id, column_name):
+            self.id = id
+            self.task_id = task_id
+            self.task_name = task_name
+            self.column_id = column_id
+            self.column_name = column_name
+
+    tasks = []
+    task_id = None
+
+    column_data = requests.get(base_url.format('boards') + '/' + board_id + '/lists', params=auth_params).json()
+    id = 0
+    for column in column_data:
+        column_tasks = requests.get(base_url.format('lists') + '/' + column['id'] + '/cards', params=auth_params).json()
+        for task in column_tasks:
+            if task['name'] == name:
+                id +=1
+                tasks.append(TaskObj(id, task['id'], task['name'], column['id'], column['name']))
+    if id>0:
+        print("Задача содержится в следующих карточках:")
+        for item in tasks:
+            print("{}.'{}' в карточке '{}'".format(item.id, item.task_name, item.column_name))
+        tasks_id = int(input("Выберите номер нужной задачи: "))
+        task_id, column_id = [[item.task_id, item.column_id] for item in tasks if item.id == tasks_id][0]
+
+    return task_id
+
+
 
 if __name__ == "__main__":
     if len(sys.argv) <= 1:
